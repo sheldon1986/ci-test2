@@ -1,0 +1,24 @@
+  - name: dev-peter
+    type: git
+    source:
+      uri: git@github.com:sheldon1986/ci-test2.git
+      branch: dev-peter
+      private_key: {{github-private-key}}
+    check_every: 10s # for demo
+
+  - name: dev-ralf
+    type: git
+    source:
+      uri: git@github.com:sheldon1986/ci-test2.git
+      branch: dev-ralf
+      private_key: {{github-private-key}}
+    check_every: 10s # for demo
+
+  - name: dev-sheldon
+    type: git
+    source:
+      uri: git@github.com:sheldon1986/ci-test2.git
+      branch: dev-sheldon
+      private_key: {{github-private-key}}
+    check_every: 10s # for demo
+
