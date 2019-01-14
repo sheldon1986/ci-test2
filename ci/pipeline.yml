@@ -1,10 +1,34 @@
 resources:
 
-  - name: repo-develop
+  - name: repo-sheldon
     type: git
     source:
       uri: git@github.com:sheldon1986/ci-test2.git
-      branch: develop
+      branch: dev-sheldon
+      private_key: {{github-private-key}}
+    check_every: 10s # for demo
+
+  - name: repo-ralf
+    type: git
+    source:
+      uri: git@github.com:sheldon1986/ci-test2.git
+      branch: dev-ralf
+      private_key: {{github-private-key}}
+    check_every: 10s # for demo
+
+  - name: repo-peter
+    type: git
+    source:
+      uri: git@github.com:sheldon1986/ci-test2.git
+      branch: dev-peter
+      private_key: {{github-private-key}}
+    check_every: 10s # for demo
+
+  - name: repo-stg
+    type: git
+    source:
+      uri: git@github.com:sheldon1986/ci-test2.git
+      branch: staging
       private_key: {{github-private-key}}
     check_every: 10s # for demo
 
@@ -56,8 +80,14 @@ jobs:
     public: true
     plan:
       - aggregate:
-        - get: repo
-          resource: repo-develop
+        - get: repo-sheldon
+          resource: repo-sheldon
+          trigger: true
+        - get: repo-ralf
+          resource: repo-ralf
+          trigger: true
+        - get: repo-peter
+          resource: repo-peter
           trigger: true
         - get: m2
       - task: unit
@@ -69,8 +99,16 @@ jobs:
     plan:
       - aggregate:
         - get: m2
-        - get:  repo
-          resource: repo-develop
+        - get:  repo-sheldon
+          resource: repo-sheldon
+          passed: [ test-develop ]
+          trigger: true
+        - get:  repo-ralf
+          resource: repo-ralf
+          passed: [ test-develop ]
+          trigger: true
+        - get:  repo-peter
+          resource: repo-peter
           passed: [ test-develop ]
           trigger: true
       - task: build
@@ -84,11 +122,47 @@ jobs:
   - name: pass-dev
     plan:
       - aggregate:
-        - get: repo
-          resource: repo-develop
+              #        - get: repo
+              #          resource: repo-develop
         - get: cf-dev
           passed: [ deploy-develop ]
           trigger: false
+          #        - get: repo
+          #          resource: repo-stg
+        - get: repo-sheldon
+          #          passed: [ deploy-develop ]
+          #          trigger: true
+        - get: repo-ralf
+          #          passed: [ deploy-develop ]
+          #          trigger: true
+        - get: repo-peter
+          #          passed: [ deploy-develop ]
+          #          trigger: true
+
+  - name: merge-dev-to-staging
+    public: true
+    plan:
+      - aggregate:
+        - get: repo
+          resource: repo-stg
+        - get: repo-sheldon
+          passed: [ pass-dev ]
+          trigger: true
+        - get: repo-ralf
+          passed: [ pass-dev ]
+          trigger: true
+        - get: repo-peter
+          passed: [ pass-dev ]
+          trigger: true
+      - task: merge-release-to-master
+        file: repo-develop/ci/tasks/merge-release-branch.yml
+        params:
+          GIT_EMAIL: {{git-email}}
+          GIT_NAME: {{git-name}}
+      - put: repo
+        resource: repo-stg
+        params:
+          repository: out
 
   - name: test-stg
     serial: true
@@ -96,8 +170,8 @@ jobs:
     plan:
       - aggregate:
         - get: repo
-          resource: repo-develop
-          passed: [ pass-dev ]
+          resource: repo-stg
+          passed: [ merge-dev-to-staging ]
           trigger: true
         - get: m2
       - task: unit
@@ -110,7 +184,7 @@ jobs:
       - aggregate:
         - get: m2
         - get:  repo
-          resource: repo-develop
+          resource: repo-stg
           passed: [ test-stg ]
           trigger: true
       - task: build
@@ -125,7 +199,7 @@ jobs:
     plan:
       - aggregate:
         - get: repo
-          resource: repo-develop
+          resource: repo-stg
         - get: cf-staging
           passed: [ deploy-staging ]
           trigger: false
@@ -136,7 +210,7 @@ jobs:
       - aggregate:
         - get: repo
           resource: repo-master
-        - get: repo-develop
+        - get: repo-stg
           passed: [ pass-stg ]
           trigger: true
       - task: merge-release-to-master
